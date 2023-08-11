@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
-import Button from './Button/Button';
 import Modal from './Modal/Modal';
 import Loader from './Loader/Loader';
-
+import Button from './Button/Button';
+import { fetchInitialImages, fetchMoreImages } from './Pixabay/Pixabay';
 
 class App extends Component {
   state = {
@@ -14,11 +14,14 @@ class App extends Component {
     isLoading: false,
     showModal: false,
     selectedImage: '',
+    hasMoreImages: false,
   };
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.searchQuery !== this.state.searchQuery) {
-      this.fetchInitialImages();
+      this.setState({ page: 1, images: [], hasMoreImages: false }, () => {
+        this.fetchInitialImages();
+      });
     }
   }
 
@@ -27,28 +30,22 @@ class App extends Component {
       return;
     }
 
-    this.setState({ searchQuery: query, page: 1, images: [] }, () => {
+    this.setState({ searchQuery: query }, () => {
       this.fetchInitialImages();
     });
   };
 
   fetchInitialImages = () => {
     const { searchQuery, page } = this.state;
-    const API_KEY = '38718040-cf73f251e75bc23227b130d01';
-    const URL = `https://pixabay.com/api/?q=${searchQuery}&page=${page}&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`;
 
     this.setState({ isLoading: true });
 
-    fetch(URL)
-      .then(response => response.json())
-      .then(data => {
-        if (data.hits && data.hits.length > 0) {
-          const imagesWithLargerSizes = data.hits.map(image => ({
-            ...image,
-            webformatURL: image.largeImageURL,
-          }));
-          this.setState({ images: imagesWithLargerSizes });
-        }
+    fetchInitialImages(searchQuery, page)
+      .then(imagesWithLargerSizes => {
+        this.setState({
+          images: imagesWithLargerSizes,
+          hasMoreImages: imagesWithLargerSizes.length === 12,
+        });
       })
       .catch(error => console.error('Error fetching images:', error))
       .finally(() => {
@@ -62,24 +59,17 @@ class App extends Component {
 
   fetchMoreImages = () => {
     const { searchQuery, page } = this.state;
-    const API_KEY = '38718040-cf73f251e75bc23227b130d01';
-    const URL = `https://pixabay.com/api/?q=${searchQuery}&page=${page + 1}&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`;
+    const nextPage = page + 1;
 
     this.setState({ isLoading: true });
 
-    fetch(URL)
-      .then(response => response.json())
-      .then(data => {
-        if (data.hits && data.hits.length > 0) {
-          const imagesWithLargerSizes = data.hits.map(image => ({
-            ...image,
-            webformatURL: image.largeImageURL,
-          }));
-          this.setState(prevState => ({
-            images: [...prevState.images, ...imagesWithLargerSizes],
-            page: prevState.page + 1,
-          }));
-        }
+    fetchMoreImages(searchQuery, nextPage)
+      .then(newImagesWithLargerSizes => {
+        this.setState(prevState => ({
+          images: [...prevState.images, ...newImagesWithLargerSizes],
+          page: nextPage,
+          hasMoreImages: newImagesWithLargerSizes.length === 12,
+        }));
       })
       .catch(error => console.error('Error fetching images:', error))
       .finally(() => {
@@ -99,16 +89,14 @@ class App extends Component {
   };
 
   render() {
-    const { images, isLoading, showModal, selectedImage } = this.state;
+    const { images, isLoading, showModal, selectedImage, hasMoreImages } = this.state;
 
     return (
       <div className="App">
         <Searchbar onSubmit={this.handleFormSubmit} />
         <ImageGallery images={images} toggleModal={this.toggleModal} />
+        {hasMoreImages && <Button onClick={this.fetchMoreImages} />}
         {isLoading && <Loader />}
-        {images.length > 0 && !isLoading && (
-          <Button onClick={this.fetchMoreImages} />
-        )}
         {showModal && (
           <Modal onClose={this.toggleModal} largeImageURL={selectedImage} />
         )}

@@ -10,7 +10,7 @@ const ImageGallery = ({ images, toggleModal }) => {
           <img
             src={image.webformatURL}
             alt=""
-            onClick={() => toggleModal(image.largeImageURL)} // Додано обробник події onClick
+            onClick={() => toggleModal(image.largeImageURL)}
           />
         </StyledImageGalleryItem>
       ))}
