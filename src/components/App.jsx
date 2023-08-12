@@ -59,15 +59,14 @@ class App extends Component {
 
   fetchMoreImages = () => {
     const { searchQuery, page } = this.state;
-    const nextPage = page + 1;
 
     this.setState({ isLoading: true });
 
-    fetchMoreImages(searchQuery, nextPage)
+    fetchMoreImages(searchQuery, page + 1)
       .then(newImagesWithLargerSizes => {
         this.setState(prevState => ({
           images: [...prevState.images, ...newImagesWithLargerSizes],
-          page: nextPage,
+          page: prevState.page + 1,
           hasMoreImages: newImagesWithLargerSizes.length === 12,
         }));
       })
