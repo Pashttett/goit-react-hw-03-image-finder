@@ -8,100 +8,90 @@ import { fetchInitialImages, fetchMoreImages } from './Pixabay/Pixabay';
 
 class App extends Component {
   state = {
-    value: '',
+    searchQuery: '',
     gallery: [],
     page: 1,
     isLoading: false,
-    modalActive: false,
-    clickedImageUrl: '',
+    showModal: false,
+    selectedImage: '',
     loadMore: false,
-    notFoundText: false,
   };
-
-  async componentDidUpdate(_, prevState) {
-    const { value, page } = this.state;
-
-    if (prevState.value !== value) {
-      this.setState({
-        isLoading: true,
-        loadMore: false,
-        gallery: [],
-        notFoundText: false,
-        page: 1,
-      });
-
-      try {
-        const imagesWithLargerSizes = await fetchInitialImages(value, page);
-        this.setState({ gallery: imagesWithLargerSizes });
-
-        if (imagesWithLargerSizes.length === 12) {
-          this.setState({
-            loadMore: true,
-            isLoading: false,
-          });
-        } else if (imagesWithLargerSizes.length === 0) {
-          this.setState({
-            isLoading: false,
-            notFoundText: true,
-          });
-        } else {
-          this.setState({
-            loadMore: false,
-            isLoading: false,
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching images:', error);
-        this.setState({
-          isLoading: false,
-          notFoundText: true,
-        });
-      }
-    }
-
-    if (prevState.page !== page) {
-      try {
-        const newImagesWithLargerSizes = await fetchMoreImages(value, page);
-        this.setState(prevState => ({
-          gallery: [...prevState.gallery, ...newImagesWithLargerSizes],
-        }));
-      } catch (error) {
-        console.error('Error fetching more images:', error);
-      }
+  
+  componentDidUpdate(prevProps, prevState) {
+    if (
+      this.state.page !== prevState.page ||
+      this.state.searchQuery !== prevState.searchQuery
+    ) {
+      this.fetchImages();
     }
   }
 
-  showModal = clickedImageUrl => {
-    this.setState({ modalActive: true, clickedImageUrl });
+  handleFormSubmit = query => {
+    if (!query) {
+      return;
+    }
+
+    this.setState({ searchQuery: query, gallery: [], page: 1, loadMore: true });
   };
 
-  closeModal = () => {
-    this.setState({ modalActive: false, clickedImageUrl: '' });
+  handleLoadMore = () => {
+    this.setState(prevState => ({
+      page: prevState.page + 1,
+      loadMore: true,
+    }));
   };
 
-  handleSubmit = async value => {
-    this.setState({ value });
+  fetchImages = () => {
+    const { searchQuery, page, loadMore } = this.state;
+
+    if (!searchQuery) {
+      return;
+    }
+
+    if (loadMore) {
+      const fetchFunction = page === 1 ? fetchInitialImages : fetchMoreImages;
+
+      this.setState({ isLoading: true });
+
+      fetchFunction(searchQuery, page)
+        .then(imagesWithLargerSizes => {
+          this.setState(prevState => ({
+            gallery: page === 1 ? imagesWithLargerSizes : [...prevState.gallery, ...imagesWithLargerSizes],
+            loadMore: imagesWithLargerSizes.length === 12,
+          }));
+        })
+        .catch(error => console.error('Error fetching images:', error))
+        .finally(() => {
+          this.setState({ isLoading: false });
+          if (page === 1) {
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth',
+            });
+          }
+        });
+    }
   };
 
-  handleLoadMore = async () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  toggleModal = (imageURL = '') => {
+    this.setState(prevState => ({
+      showModal: !prevState.showModal,
+      selectedImage: imageURL,
+    }));
   };
 
   render() {
-    const { gallery, isLoading, modalActive, clickedImageUrl, loadMore, notFoundText } = this.state;
+    const { gallery, isLoading, showModal, selectedImage, loadMore } = this.state;
 
     return (
       <div className="App">
-        <Searchbar onSubmit={this.handleSubmit} />
-        <ImageGallery
-          images={gallery}
-          toggleModal={this.showModal}
-          loadMore={loadMore}
-          notFoundText={notFoundText}
-        />
-        {loadMore && <Button onClick={this.handleLoadMore} />}
+        <Searchbar onSubmit={this.handleFormSubmit} />
+        <ImageGallery images={gallery} toggleModal={this.toggleModal} />
+        {gallery.length > 0 && loadMore && (
+          <Button onClick={this.handleLoadMore} />
+        )}
         {isLoading && <Loader />}
-        {modalActive && <Modal onClose={this.closeModal} largeImageURL={clickedImageUrl} />}
+        {showModal && <Modal onClose={this.toggleModal} largeImageURL={selectedImage} />}
       </div>
     );
   }
