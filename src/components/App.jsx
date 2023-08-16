@@ -14,9 +14,8 @@ class App extends Component {
     isLoading: false,
     showModal: false,
     selectedImage: '',
-    loadMore: false,
   };
-  
+
   componentDidUpdate(prevProps, prevState) {
     if (
       this.state.page !== prevState.page ||
@@ -31,46 +30,42 @@ class App extends Component {
       return;
     }
 
-    this.setState({ searchQuery: query, gallery: [], page: 1, loadMore: true });
-  };
-
-  handleLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-      loadMore: true,
-    }));
+    this.setState({ searchQuery: query, gallery: [], page: 1 });
   };
 
   fetchImages = () => {
-    const { searchQuery, page, loadMore } = this.state;
+    const { searchQuery, page } = this.state;
 
     if (!searchQuery) {
       return;
     }
 
-    if (loadMore) {
-      const fetchFunction = page === 1 ? fetchInitialImages : fetchMoreImages;
+    const fetchFunction = page === 1 ? fetchInitialImages : fetchMoreImages;
 
-      this.setState({ isLoading: true });
+    this.setState({ isLoading: true });
 
-      fetchFunction(searchQuery, page)
-        .then(imagesWithLargerSizes => {
-          this.setState(prevState => ({
-            gallery: page === 1 ? imagesWithLargerSizes : [...prevState.gallery, ...imagesWithLargerSizes],
-            loadMore: imagesWithLargerSizes.length === 12,
-          }));
-        })
-        .catch(error => console.error('Error fetching images:', error))
-        .finally(() => {
-          this.setState({ isLoading: false });
-          if (page === 1) {
-            window.scrollTo({
-              top: 0,
-              behavior: 'smooth',
-            });
-          }
-        });
-    }
+    fetchFunction(searchQuery, page)
+      .then(data => {
+        const imagesWithLargerSizes = data.map(image => ({
+          ...image,
+          webformatURL: image.largeImageURL,
+        }));
+
+
+        this.setState(prevState => ({
+          gallery: [...prevState.gallery, ...imagesWithLargerSizes],
+        }));
+      })
+      .catch(error => console.error('Error fetching images:', error))
+      .finally(() => {
+        this.setState({ isLoading: false });
+        if (page === 1) {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+          });
+        }
+      });
   };
 
   toggleModal = (imageURL = '') => {
@@ -81,17 +76,20 @@ class App extends Component {
   };
 
   render() {
-    const { gallery, isLoading, showModal, selectedImage, loadMore } = this.state;
+    const { gallery, isLoading, showModal, selectedImage, loadMore} = this.state;
 
     return (
       <div className="App">
         <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery images={gallery} toggleModal={this.toggleModal} />
-        {gallery.length > 0 && loadMore && (
-          <Button onClick={this.handleLoadMore} />
-        )}
+        <ImageGallery
+          images={gallery}
+          toggleModal={this.toggleModal}
+        />
         {isLoading && <Loader />}
         {showModal && <Modal onClose={this.toggleModal} largeImageURL={selectedImage} />}
+        {loadMore &&(
+          <Button onClick={this.fetchImages} />
+        )}
       </div>
     );
   }
