@@ -14,6 +14,7 @@ class App extends Component {
     isLoading: false,
     showModal: false,
     selectedImage: '',
+    loadMore: false,
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -51,9 +52,11 @@ class App extends Component {
           webformatURL: image.largeImageURL,
         }));
 
+        const totalHits = data.totalHits;
 
         this.setState(prevState => ({
           gallery: [...prevState.gallery, ...imagesWithLargerSizes],
+          loadMore: prevState.page < Math.ceil(totalHits / 12),
         }));
       })
       .catch(error => console.error('Error fetching images:', error))
@@ -76,7 +79,7 @@ class App extends Component {
   };
 
   render() {
-    const { gallery, isLoading, showModal, selectedImage, loadMore} = this.state;
+    const { gallery, isLoading, showModal, selectedImage, loadMore } = this.state;
 
     return (
       <div className="App">
