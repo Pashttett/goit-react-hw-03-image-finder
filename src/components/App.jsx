@@ -4,7 +4,7 @@ import ImageGallery from './ImageGallery/ImageGallery';
 import Modal from './Modal/Modal';
 import Loader from './Loader/Loader';
 import Button from './Button/Button';
-import { fetchInitialImages, fetchMoreImages } from './Pixabay/Pixabay';
+import { fetchInitialImages } from './Pixabay/Pixabay';
 
 class App extends Component {
   state = {
@@ -14,7 +14,7 @@ class App extends Component {
     isLoading: false,
     showModal: false,
     selectedImage: '',
-    totalHits: 0,
+    loadMore: false 
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -41,21 +41,20 @@ class App extends Component {
   };
   
   fetchImages = () => {
-    const { searchQuery, page, totalHits } = this.state;
+    const { searchQuery, page } = this.state;
 
     if (!searchQuery) {
       return;
     }
     
-    const fetchFunction = page === 1 ? fetchInitialImages : fetchMoreImages;
     
     this.setState({ isLoading: true });
     
-    fetchFunction(searchQuery, page)
-    .then(imagesWithLargerSizes => {
+    fetchInitialImages(searchQuery, page)
+      .then(({hits, totalHits}) => {
       this.setState(prevState => ({
-        gallery: [...prevState.gallery, ...imagesWithLargerSizes],
-        loadMore: page < Math.ceil(totalHits / 12),
+        gallery: [...prevState.gallery, ...hits],
+       loadMore: page < Math.ceil(totalHits / 12),
       }));
     })
       .catch(error => console.error('Error fetching images:', error))

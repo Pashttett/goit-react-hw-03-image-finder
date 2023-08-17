@@ -7,31 +7,6 @@ export const fetchInitialImages = (searchQuery, page) => {
   return fetch(URL)
     .then(response => response.json())
     .then(data => {
-      if (data.hits && data.hits.length > 0) {
-        const imagesWithLargerSizes = data.hits.map(image => ({
-          ...image,
-          webformatURL: image.largeImageURL,
-        }));
-        return imagesWithLargerSizes;
-      }
-      return [];
-    });
-};
-
-export const fetchMoreImages = (searchQuery, page) => {
-  const nextPage = page + 1;
-  const URL = `${BASE_URL}?q=${searchQuery}&page=${nextPage}&key=${API_KEY}&image_type=photo&orientation=horizontal&per_page=12`;
-
-  return fetch(URL)
-    .then(response => response.json())
-    .then(data => {
-      if (data.hits && data.hits.length > 0) {
-        const newImagesWithLargerSizes = data.hits.map(image => ({
-          ...image,
-          webformatURL: image.largeImageURL,
-        }));
-        return newImagesWithLargerSizes;
-      }
-      return [];
+      return data;
     });
 };
