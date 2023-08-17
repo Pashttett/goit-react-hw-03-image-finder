@@ -14,7 +14,7 @@ class App extends Component {
     isLoading: false,
     showModal: false,
     selectedImage: '',
-    loadMore: false,
+    totalHits: 0,
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -31,34 +31,33 @@ class App extends Component {
       return;
     }
 
-    this.setState({ searchQuery: query, gallery: [], page: 1 });
+    this.setState({ searchQuery: query, gallery: [], page: 1, loadMore: false });
   };
 
+  handleLoadMore = () => {
+    this.setState(prevState => ({
+      page: prevState.page + 1,
+    }));
+  };
+  
   fetchImages = () => {
-    const { searchQuery, page } = this.state;
+    const { searchQuery, page, totalHits } = this.state;
 
     if (!searchQuery) {
       return;
     }
-
+    
     const fetchFunction = page === 1 ? fetchInitialImages : fetchMoreImages;
-
+    
     this.setState({ isLoading: true });
-
+    
     fetchFunction(searchQuery, page)
-      .then(data => {
-        const imagesWithLargerSizes = data.map(image => ({
-          ...image,
-          webformatURL: image.largeImageURL,
-        }));
-
-        const totalHits = data.totalHits;
-
-        this.setState(prevState => ({
-          gallery: [...prevState.gallery, ...imagesWithLargerSizes],
-          loadMore: prevState.page < Math.ceil(totalHits / 12),
-        }));
-      })
+    .then(imagesWithLargerSizes => {
+      this.setState(prevState => ({
+        gallery: [...prevState.gallery, ...imagesWithLargerSizes],
+        loadMore: page < Math.ceil(totalHits / 12),
+      }));
+    })
       .catch(error => console.error('Error fetching images:', error))
       .finally(() => {
         this.setState({ isLoading: false });
@@ -84,15 +83,12 @@ class App extends Component {
     return (
       <div className="App">
         <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery
-          images={gallery}
-          toggleModal={this.toggleModal}
-        />
+        <ImageGallery images={gallery} toggleModal={this.toggleModal} />
+        {loadMore && (
+          <Button onClick={this.handleLoadMore} />
+        )}
         {isLoading && <Loader />}
         {showModal && <Modal onClose={this.toggleModal} largeImageURL={selectedImage} />}
-        {loadMore &&(
-          <Button onClick={this.fetchImages} />
-        )}
       </div>
     );
   }
